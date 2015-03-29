@@ -80,7 +80,6 @@ with BigBlueButton; if not, If not, see <http://www.gnu.org/licenses/>.
 <%@ include file="bbb_api.jsp"%>
 <%@ page import="java.util.regex.*"%>
 
-<%@ include file="demo_header.jsp"%>
 
 <%
 	if (request.getParameterMap().isEmpty()) {
@@ -279,7 +278,6 @@ Error: getJoinURL() failed
 	}
 %> 
 
-<%@ include file="demo_footer.jsp"%>
 
 </body>
 </html>

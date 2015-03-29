@@ -20,8 +20,7 @@ Author: Fred Dixon <ffdixon@bigbluebutton.org>
   
 -->
 
-<%@ page language="java" contentType="text/html; charset=UTF-8"
-	pageEncoding="UTF-8"%>
+<%@ page language="java" contentType="text/html; charset=UTF-8"	pageEncoding="UTF-8"%>
 <% 
 	request.setCharacterEncoding("UTF-8"); 
 	response.setCharacterEncoding("UTF-8"); 
@@ -32,11 +31,143 @@ Author: Fred Dixon <ffdixon@bigbluebutton.org>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7" />
-	<title>Create Your Own Meeting</title>
+	<link rel="icon" type="image/vnd.microsoft.icon" href="images/favicon.ico">
+	<title>Create Your Own Meeting.</title>
 
 	<script type="text/javascript"
 		src="js/jquery.min.js"></script>
 	<script type="text/javascript" src="js/heartbeat.js"></script>
+	<script src='https://www.google.com/recaptcha/api.js'></script>
+
+
+<style>
+
+body, button, input, label, select, td, textarea {
+	font-family: 'lucida grande',tahoma,verdana,arial,sans-serif;
+	font-size: 1.2em;
+
+
+}
+
+
+
+input,textarea{
+	border-color: #bdc7d8;
+	border-radius: 5px;
+	padding: 10px 8px;
+
+    	width: 276px;
+	color: #9197a3;
+}
+
+h1{
+	text-align: center;
+}	
+
+textarea {
+	overflow: auto;
+ 	width: 500px;
+	height:220px;
+
+}
+
+input, label, button{
+	margin:10px 0px;
+}
+
+.submit{
+	border-radius: 5px;
+	color: #fff;
+	cursor: pointer;
+	display: inline-block;
+	letter-spacing: 1px;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+
+	background: linear-gradient(#67ae55, #578843) repeat scroll 0 0 #69a74e;
+    	border-color: #3b6e22 #3b6e22 #2c5115;
+    	box-shadow: 0 1px 1px #a4e388 inset;
+
+    	text-align: center;
+	font-weight: bold;
+
+	text-decoration: none;
+	padding: 10px 8px;
+
+}
+
+
+fieldset{
+	border:none;
+}
+
+.step{
+	padding: 20px;
+}
+
+.message{
+	padding: 50px;
+	text-align:center;
+	font-size: 20px;
+}
+
+.captchaError{
+	font-size:0.8em;
+	color:red;
+}
+
+ul {
+//   list-style-image: url('images/list-bullet.png');
+list-style-type:none;
+}
+
+li {
+	background: url("images/list-bullet.png") left center no-repeat;
+	padding-left: 55px;
+	height: 50px;
+	line-height: 50px;
+                                                                                    
+                                                                                    
+}
+
+#content{
+	width: 1024px;
+	height: 768px;
+	margin-left: auto ;
+  	margin-right: auto ;
+	//background-color: #FF1493;
+}
+
+#top{
+	width: 100%;
+	padding 20px;
+	text-align: center;
+	background-color:#f0f0f0; 
+}
+
+#middle{
+	width: 710px;
+	float: left;
+	//background-color: #DAA520;
+}
+
+#create{
+	width: 250px;
+	float: left;
+	//background-color: #DCDCDC;
+}
+
+#invite{
+	width: 550px;
+}
+
+.centered {
+    display: block;
+    margin-left: auto;
+    margin-right: auto 
+}
+
+</style>
+
 </head>
 <body>
 
@@ -44,56 +175,123 @@ Author: Fred Dixon <ffdixon@bigbluebutton.org>
 <%@ include file="bbb_api.jsp"%>
 <%@ page import="java.util.regex.*"%>
 
-<br>
+
+
+
+<%!
+
+public boolean verifyCaptcha(HttpServletRequest request) throws Exception{
+
+	if(request.getParameter("action") != null && request.getParameter("action").equals("create")){
+
+		String gRecaptchaResponse = request.getParameter("g-recaptcha-response");
+
+		URL apiUrl = new URL("https://www.google.com/recaptcha/api/siteverify");
+        	Map<String,Object> params = new LinkedHashMap<String,Object>();
+	        params.put("secret", "6Ld6hQMTAAAAAB9A5j14-c9yeBwHwGrB6cRHi2pt");
+        	params.put("response", gRecaptchaResponse);
+
+	        StringBuilder postData = new StringBuilder();
+        	for (Map.Entry<String,Object> param : params.entrySet()) {
+            	if (postData.length() != 0) postData.append('&');
+            	postData.append(URLEncoder.encode(param.getKey(), "UTF-8"));
+	            postData.append('=');
+        	    postData.append(URLEncoder.encode(String.valueOf(param.getValue()), "UTF-8"));
+	        }
+	        byte[] postDataBytes = postData.toString().getBytes("UTF-8");
+
+	        HttpURLConnection conn = (HttpURLConnection)apiUrl.openConnection();
+	        conn.setRequestMethod("POST");
+	        conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+	        conn.setRequestProperty("Content-Length", String.valueOf(postDataBytes.length));
+	        conn.setDoOutput(true);
+	        conn.getOutputStream().write(postDataBytes);
+
+	        StringBuffer answer = new StringBuffer();
+
+	        Reader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+	        for (int c; (c = in.read()) >= 0; answer.append((char)c));
+
+	        String googleResponse = answer.toString();
+
+		return googleResponse.contains("true");
+	}else{
+		return false; // shouldn't occur
+	}
+}
+
+%>
+
+
+
+
+<div id="top">
+	<img src="images/logo.png" alt="ukuluma" />
+</div>
+
+<div id="content">
 
 <%
-	if (request.getParameterMap().isEmpty()) {
+	if (request.getParameterMap().isEmpty() || false == verifyCaptcha(request)) {
 		//
 		// Assume we want to create a meeting
 		//
+		String capthcaError = request.getParameterMap().isEmpty() ? "" : "Please solve the capthca.";
 %>
-<%@ include file="demo_header.jsp"%>
-<h2>Create Your Own Meeting</h2>
 
-<p />
-<FORM NAME="form1" METHOD="GET">
+<div id="middle">
 
-<table width=600 cellspacing="20" cellpadding="20"
-	style="border-collapse: collapse; border-right-color: rgb(136, 136, 136);"
-	border=3>
-	<tbody>
-		<tr>
-			<td width="50%">Create your own meeting.
-			<p />
-			</td>
-			<td width="50%">Step 1. Enter your name: <input type="text" autofocus required
-				name="username1" /> <br />
-			<INPUT TYPE=hidden NAME=action VALUE="create"> <br />
-			<input id="submit-button" type="submit" value="Create meeting" /></td>
-		</tr>
-	</tbody>
-</table>
+	<p>
+	ukuluma is your free virtual meeteng room. You can use it for
+	<ul>	
+		<li>Talking to your firends</li>
+		<li>Teaching your students</li>
+		<li>Explaining your software</li>
+	</ul>
 
-</FORM>
+	</p>
+	<br/>
+	<br/>
+	<br/>
+	<br/>
+</div>
+
+<div id="create" class="step">
+
+	<FORM id="create_meeting" NAME="form1" METHOD="GET">
+		<fieldset>
+		<input id="username1" name="username1" type="text" autofocus="autofocus" required="required" placeholder="Enter Your Name" /> 
+		<input name="action" type="hidden" value="create" />
+		<br/>
+		<div class="g-recaptcha" data-sitekey="6Ld6hQMTAAAAAPCzGpZkWbF-bj0FMtWpB4MSZ_6F"></div>
+		<div class="captchaError"><%=capthcaError%></div>
+		<input id="submit-button" type="submit" value="Create meeting" class="submit"/>
+
+		</fieldset>
+	</FORM>
+</div>
 
 <script>
 //
 // We could have asked the user for both their name and a meeting title, but we'll just use their name to create a title
 // We'll use JQuery to dynamically update the button
 //
-$(document).ready(function(){
-    $("input[name='username1']").keyup(function() {
-        if ($("input[name='username1']").val() == "") {
-        	$("#submit-button").attr('value',"Create meeting" );
-        } else {
-       $("#submit-button").attr('value',"Create " +$("input[name='username1']").val()+ "'s meeting" );
-        }
-    });
-});
+//$(document).ready(function(){
+//    $("input[name='username1']").keyup(function() {
+//        if ($("input[name='username1']").val() == "") {
+//        	$("#submit-button").attr('value',"Create meeting" );
+//        } else {
+//       $("#submit-button").attr('value',"Create " +$("input[name='username1']").val()+ "'s meeting" );
+//        }
+//    });
+//});
 </script>
 
 <%
 	} else if (request.getParameter("action").equals("create")) {
+
+	
+
 		//
 		// User has requested to create a meeting
 		//
@@ -109,41 +307,37 @@ $(document).ready(function(){
 		String url = BigBlueButtonURL.replace("bigbluebutton/","demo/");
 		String inviteURL = url + "create.jsp?action=invite&meetingID=" + URLEncoder.encode(meetingID, "UTF-8");
 %>
+<div id="invite" class="step centered">
 
-<hr />
-<h2>Meeting Created</h2>
-<hr />
+	<div name="message" class="message">
+		<%=username%>'s meeting has been created.
+	</div>
+
+	<form name="form2" method="POST">
+		Step 1. Invite others using the following text:
+		<br/>
+		<textarea  name="myname" wrap="off">
+
+    Hello, 
+    please join my meeting using following URL: 
+    
+    <%=inviteURL%>
+    
+    best regards 
+    <%=username%>
+
+		</textarea>
+	</form>
 
 
-<table width="800" cellspacing="20" cellpadding="20"
-	style="border-collapse: collapse; border-right-color: rgb(136, 136, 136);"
-	border=3>
-	<tbody>
-		<tr>
-			<td width="50%">
-			<center><strong> <%=username%>'s meeting</strong> has been
-			created.</center>
-			</td>
+<p>
+	Step 2. Click the following button to start your meeting:
+	<br/>
+	<br/>
+	<a href="<%=joinURL%>" class="submit">Start Meeting</a>
+</p>
 
-			<td width="50%">
-			<p>&nbsp;</p>
-
-			Step 2. Invite others using the following <a href="<%=inviteURL%>">link</a> (shown below):
-			<form name="form2" method="POST">
-				<textarea cols="62" rows="5" name="myname" style="overflow: hidden">
-					<%=inviteURL%>
-				</textarea>
-			</form>
-			<p>&nbsp;
-			<p />Step 3. Click the following link to start your meeting:
-			<p>&nbsp;</p>
-			<center><a href="<%=joinURL%>">Start Meeting</a></center>
-			<p>&nbsp;</p>
-
-			</td>
-		</tr>
-	</tbody>
-</table>
+</div>
 
 
 
@@ -201,29 +395,24 @@ function mycallback() {
 }
 </script>
 
-<hr />
-<h2><strong><%=meetingID%></strong> has not yet started.</h2>
-<hr />
+<div id="waiting" class="step">
 
+	<div name="message" class="message">
+		<%=meetingID%> has not yet started.
+	</div>
 
-<table width=600 cellspacing="20" cellpadding="20"
-	style="border-collapse: collapse; border-right-color: rgb(136, 136, 136);"
-	border=3>
-	<tbody>
-		<tr>
-			<td width="50%">
+	<p>
+	Hi <%=username%>,
+	<br/>
+	Now waiting for the moderator to start <%=meetingID%>.
+	Your browser will automatically refresh and join the meeting when it starts.
+	<br/>
+	<br/>
+	<br/>
+	<img src="images/polling.gif" class="centered" />
+	</p>
 
-			<p>Hi <%=username%>,</p>
-			<p>Now waiting for the moderator to start <strong><%=meetingID%></strong>.</p>
-			<br />
-			<p>(Your browser will automatically refresh and join the meeting
-			when it starts.)</p>
-			</td>
-			<td width="50%"><img src="polling.gif"></img></td>
-		</tr>
-	</tbody>
-</table>
-
+</div>
 
 <%
 }
@@ -235,35 +424,21 @@ function mycallback() {
 		String meetingID = request.getParameter("meetingID");
 %>
 
-<hr />
-<h2>Invite</h2>
-<hr />
+<div id="invite" />
+	<p>
+	You are about to join <%=meetingID%>.
+	</p>
+</div>
 
-<FORM NAME="form3" METHOD="GET">
-
-<table width=600 cellspacing="20" cellpadding="20"
-	style="border-collapse: collapse; border-right-color: rgb(136, 136, 136);"
-	border=3>
-	<tbody>
-		<tr>
-			<td width="50%">
-
-			<p />You have been invited to join<br />
-			<strong><%=meetingID%></strong>.
-			</td>
-
-			<td width="50%">Enter your name: <input type="text"
-				name="username" /> <br />
-			<INPUT TYPE=hidden NAME=meetingID VALUE="<%=meetingID%>"> <INPUT
-				TYPE=hidden NAME=action VALUE="enter"> <br />
-			<input type="submit" value="Join" /></td>
-		</tr>
-	</tbody>
-</table>
-
-</FORM>
-
-
+<form NAME="form3" METHOD="GET">
+<fieldset>
+	<input id="username" name="username" type="text" placeholder="Enter Your Name" /> 
+	<input type="hidden" name="meetingID" value="<%=meetingID%>"> 
+	<input type="hidden" name="action" value="enter">
+	<br/>
+	<input type="submit" value="Join" class="submit"/>
+</fieldset>
+</form>
 
 
 <%
@@ -294,7 +469,8 @@ Error: getJoinURL() failed
  }
  %> 
 
-<%@ include file="demo_footer.jsp"%>
+
+</div>
 
 </body>
 </html>
